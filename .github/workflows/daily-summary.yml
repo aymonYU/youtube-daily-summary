@@ -2,8 +2,8 @@ name: Daily YouTube Summary
 
 on:
   schedule:
-    # 每天 UTC 01:00 触发（北京时间 9:00）
-    - cron: "0 1 * * *"
+    # 每天 UTC 03:17 触发（北京时间 11:17）
+    - cron: "17 3 * * *"
   workflow_dispatch: # 支持手动触发
 
 jobs:
