@@ -8,7 +8,7 @@ export class GeminiClient {
   private timeout: number;
   private maxRetriesPerKey: number;
 
-  constructor(apiKeys: string[], timeout = 60000, maxRetriesPerKey = 2) {
+  constructor(apiKeys: string[], timeout = 60000, maxRetriesPerKey = 1) {
     if (apiKeys.length === 0) {
       throw new Error("At least one Gemini API key is required");
     }
