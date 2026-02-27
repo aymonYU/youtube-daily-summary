@@ -7,6 +7,20 @@ export interface VideoInfo {
   description: string;
   publishedAt: string;
   channelTitle: string;
+  /** 视频时长（秒） */
+  durationSeconds: number;
+}
+
+/**
+ * 解析 ISO 8601 时长格式（如 PT1H2M30S）为秒数。
+ */
+function parseISO8601Duration(duration: string): number {
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  const hours = parseInt(match[1] || "0", 10);
+  const minutes = parseInt(match[2] || "0", 10);
+  const seconds = parseInt(match[3] || "0", 10);
+  return hours * 3600 + minutes * 60 + seconds;
 }
 
 /**
@@ -112,16 +126,38 @@ export async function getLatestVideos(
       key: apiKey,
     });
 
+    const rawItems = (data.items ?? []).slice(0, maxResults);
+    const videoIds = rawItems.map((item: any) => item.id.videoId).filter(Boolean);
+
+    // 用 videos API 批量获取时长
+    const durationMap: Record<string, number> = {};
+    if (videoIds.length > 0) {
+      try {
+        const detailData = await requestWithRetry(`${YOUTUBE_API_BASE}/videos`, {
+          part: "contentDetails",
+          id: videoIds.join(","),
+          key: apiKey,
+        });
+        for (const item of detailData.items ?? []) {
+          const dur = item.contentDetails?.duration ?? "";
+          durationMap[item.id] = parseISO8601Duration(dur);
+        }
+      } catch (err) {
+        console.warn(`[WARN] Failed to fetch video durations: ${err}`);
+      }
+    }
+
     const videos: VideoInfo[] = [];
-    for (const item of data.items ?? []) {
-      if (videos.length >= maxResults) break;
+    for (const item of rawItems) {
       const snippet = item.snippet ?? {};
+      const vid = item.id.videoId;
       videos.push({
-        videoId: item.id.videoId,
+        videoId: vid,
         title: snippet.title ?? "",
         description: snippet.description ?? "",
         publishedAt: snippet.publishedAt ?? "",
         channelTitle: snippet.channelTitle ?? "",
+        durationSeconds: durationMap[vid] ?? 0,
       });
     }
 

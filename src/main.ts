@@ -116,6 +116,15 @@ async function main() {
       }
 
       // 新视频：生成摘要 -> 存储 -> 发送 Telegram
+      // 超过 30 分钟的视频跳过 Gemini 摘要
+      const MAX_DURATION_SECONDS = 30 * 60;
+      if (video.durationSeconds > MAX_DURATION_SECONDS) {
+        const mins = Math.round(video.durationSeconds / 60);
+        console.log(`[INFO] Skipping (duration ${mins}min > 30min): [${video.videoId}] ${video.title}`);
+        totalSkipped++;
+        continue;
+      }
+
       console.log(`[INFO] Generating summary for: [${video.videoId}] ${video.title}`);
 
       const summary = await gemini.summarizeVideo(
