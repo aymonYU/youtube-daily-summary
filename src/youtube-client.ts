@@ -1,5 +1,6 @@
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 
+/** search API 返回的视频片段信息，供后续 Gemini 摘要和 Supabase 存储使用 */
 export interface VideoInfo {
   videoId: string;
   title: string;
@@ -8,6 +9,9 @@ export interface VideoInfo {
   channelTitle: string;
 }
 
+/**
+ * 带重试的 YouTube API 请求。指数退避（2^attempt 秒），超时默认 30s。
+ */
 async function requestWithRetry(
   url: string,
   params: Record<string, string>,
@@ -40,6 +44,10 @@ async function requestWithRetry(
   throw new Error(`YouTube API request failed after ${maxRetries} retries: ${url}`);
 }
 
+/**
+ * 将频道 handle（如 @channel1）解析为频道 ID。
+ * 先尝试 channels API 的 forHandle 参数，失败后回退到 search API。
+ */
 export async function getChannelId(
   apiKey: string,
   handle: string
@@ -86,6 +94,9 @@ export async function getChannelId(
   return null;
 }
 
+/**
+ * 获取指定频道的最新视频列表。出错时返回空数组，不会抛异常。
+ */
 export async function getLatestVideos(
   apiKey: string,
   channelId: string,

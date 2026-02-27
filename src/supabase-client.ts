@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+/** 写入 video_summaries 表时的字段结构 */
 export interface VideoSummaryRecord {
   video_id: string;
   title: string;
@@ -7,6 +8,7 @@ export interface VideoSummaryRecord {
   summary: string;
 }
 
+/** getSummaryStatus 的返回值，main.ts 据此决定跳过 / 重试 Telegram / 全量处理 */
 export interface SummaryStatus {
   exists: boolean;
   telegramSent: boolean;
@@ -15,6 +17,10 @@ export interface SummaryStatus {
   channel?: string;
 }
 
+/**
+ * 封装 video_summaries 表的读写操作。
+ * 所有方法在出错时返回安全默认值（false / exists:false）并打印日志，不会抛异常。
+ */
 export class SupabaseStore {
   private client: SupabaseClient;
 

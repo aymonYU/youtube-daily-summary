@@ -1,4 +1,5 @@
 const TELEGRAM_API_BASE = "https://api.telegram.org";
+// Telegram Bot API 单条消息上限
 const MAX_MESSAGE_LENGTH = 4096;
 
 export class TelegramClient {
@@ -10,9 +11,7 @@ export class TelegramClient {
     this.chatId = chatId;
   }
 
-  /**
-   * 发送消息到 Telegram，自动分段处理长文本。
-   */
+  // 对外入口：超长文本自动分段发送，返回所有段均成功时为 true
   async sendMessage(text: string): Promise<boolean> {
     const chunks = this.splitMessage(text);
     let allSuccess = true;
@@ -22,7 +21,7 @@ export class TelegramClient {
       if (!success) {
         allSuccess = false;
       }
-      // 多段之间间隔避免限流
+      // 多段之间间隔避免触发 Telegram 限流（30msg/s）
       if (chunks.length > 1) {
         await Bun.sleep(500);
       }
@@ -30,6 +29,8 @@ export class TelegramClient {
     return allSuccess;
   }
 
+  // 优先以 Markdown 模式发送；若 Telegram 返回 400 "can't parse"，
+  // 说明摘要内含非法 Markdown 字符，降级为纯文本重试
   private async sendChunk(text: string): Promise<boolean> {
     const url = `${TELEGRAM_API_BASE}/bot${this.botToken}/sendMessage`;
     try {
@@ -59,6 +60,7 @@ export class TelegramClient {
     }
   }
 
+  // 纯文本兜底，不带 parse_mode
   private async sendChunkPlain(text: string): Promise<boolean> {
     const url = `${TELEGRAM_API_BASE}/bot${this.botToken}/sendMessage`;
     try {
@@ -81,9 +83,8 @@ export class TelegramClient {
     }
   }
 
-  /**
-   * 按段落边界切割长文本，避免截断 Markdown 格式。
-   */
+  // 按段落边界切割长文本，优先级：双换行 > 单换行 > 硬截断
+  // 避免在 Markdown 格式中间截断（如标题、加粗块）
   private splitMessage(text: string): string[] {
     if (text.length <= MAX_MESSAGE_LENGTH) {
       return [text];
@@ -110,6 +111,7 @@ export class TelegramClient {
       }
 
       chunks.push(remaining.slice(0, splitAt));
+      // trimStart 去除段首多余空白，保持每段内容整洁
       remaining = remaining.slice(splitAt).trimStart();
     }
 
